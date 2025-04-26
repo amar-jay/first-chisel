@@ -1,0 +1,20 @@
+{
+  "name": "scala-cli",
+  "argv": [
+    "/home/manan/.cache/scalacli/local-repo/bin/scala-cli/scala-cli",
+    "bsp",
+    "--json-options",
+    "/home/manan/code/riscv/chisel/.scala-build/ide-options-v2.json",
+    "--json-launcher-options",
+    "/home/manan/code/riscv/chisel/.scala-build/ide-launcher-options.json",
+    "--envs-file",
+    "/home/manan/code/riscv/chisel/.scala-build/ide-envs.json",
+    "/home/manan/code/riscv/chisel/chisel-example.scala"
+  ],
+  "version": "1.6.1",
+  "bspVersion": "2.1.1",
+  "languages": [
+    "scala",
+    "java"
+  ]
+}
