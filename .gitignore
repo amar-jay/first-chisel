@@ -1,3 +1,4 @@
 obj_dir
 test_run_dir
 .scala-build
+.bsp
