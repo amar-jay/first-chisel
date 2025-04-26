@@ -7,22 +7,18 @@ import chisel3._
 // _root_ disambiguates from package chisel3.util.circt if user imports chisel3.util._
 import _root_.circt.stage.ChiselStage
 
-class FirFilter(len: Int, seq: Seq[Int]) extends Module {
-}
-
-
 // basic covolution by [1 1 1], nothing fancy
 class MovingAverage(bitWidth: Int) extends Module {
   val io = IO(new Bundle {
     val in = Input(UInt(bitWidth.W))
     val out = Output(UInt(bitWidth.W))
   })
+  val next_1 = RegNext(io.in)
+  val next_2 = RegNext(next_1)
 
-  val next = RegNext(io.in)
-  val next_2 = RegNext(next)
-
-  io.out := (io.in * 1.U) + (next * 1.U) + (next_2 * 1.U)
+  io.out := (io.in * 1.U) + (next_1 * 1.U) + (next_2 * 1.U) 
 }
+
 
 object Main extends App {
   println(

@@ -11,23 +11,22 @@ import org.scalatest.flatspec.AnyFlatSpec
 // _root_ disambiguates from package chisel3.util.circt if user imports chisel3.util._
 import _root_.circt.stage.ChiselStage
 
-// create a FIR filter using convollution coefficients
+// create a FIR filter using convolution coefficients
 class FirFilter(bitWidth: Int, seq: Seq[UInt]) extends Module {
   val io = IO(new Bundle {
     val in = Input(UInt(bitWidth.W))
     val out = Output(UInt(bitWidth.W))
   })
 
-  // serial-in parallel-out shift register
-  val zs = Reg(Vec(seq.length, UInt(bitWidth.W)))
-  zs(0) := io.in
+  val z = Reg(Vec(seq.length, UInt(bitWidth.W)))
+  z(0) := io.in
   for (i <- 1 until seq.length) {
-    zs(i) := zs(i - 1)
+    z(i) := z(i-1)
   }
 
-  val products = VecInit.tabulate(seq.length)(i => zs(i) * seq(i))
+  val conv = VecInit.tabulate(seq.length)(i=> z(i) * seq(i))
 
-  io.out := products.reduce(_ +& _)
+  io.out := conv.reduce(_ +& _)
 }
 
 object Main extends App {
