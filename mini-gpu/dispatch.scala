@@ -9,6 +9,7 @@ import chisel3.util._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import _root_.circt.stage.ChiselStage
+import dataclass.data
 
 // if X is an input, ready is an output, and valid and input
 // but if X is an output, ready is an output and 
@@ -18,10 +19,10 @@ object ChannelStates extends ChiselEnum {
 }
 
 class ConsumerIO(dataWidth:Int, addrWidth: Int) extends Bundle {
-	val read = Flipped(Decoupled(new Bundle {
+	val read = Decoupled(new Bundle {
 		val address = Input(UInt(addrWidth.W))
 		val data = Output(UInt(dataWidth.W))
-	}))
+	})
 
 	val write = Flipped(Decoupled(new Bundle {
 		val address = Input(UInt(addrWidth.W))
@@ -53,29 +54,81 @@ class Dispatcher(
 	dataWidth:Int,
 	addrWidth: Int,
 	) extends Module {
-  val io = IO(new Bundle {
-    val consumers = Vec(numConsumers, new ConsumerIO(addrWidth, dataWidth))
-    val channels = Vec(numChannels, new ChannelIO(addrWidth, dataWidth))
-  })
+	val io = IO(new Bundle {
+		val consumers = Vec(numConsumers, new ConsumerIO(addrWidth, dataWidth))
+		val channels = Vec(numChannels, new ChannelIO(addrWidth, dataWidth))
+	})
 
-  private val channelState = RegInit(VecInit(Seq.fill(numChannels){ChannelStates.IDLE}))
+   private val channelState = RegInit(VecInit.fill(numChannels){ChannelStates.IDLE})
+	val currentConsumer = Wire(Vec(numChannels, UInt(log2Ceil(numConsumers).W)))
+	val channelServingConsumer = Wire(UInt(numChannels.W)) // Equivalent to reg [NUM_CONSUMERS-1:0] channel_serving_consumer
 
+//   private val current_consumer = RegInit(Vec())
+  withReset (reset.asBool) {
+	// clear the channel state
+		io.channels.map({
+			ch => {
+				ch.read.bits.address := 0.U
+				ch.read.valid := false.B
+
+				ch.write.valid := false.B
+				ch.write.bits.address := 0.U
+				ch.write.bits.data := 0.U
+			}
+		})
+
+
+		io.consumers.map({
+			cons => {
+				cons.read.valid := false.B
+				cons.read.bits.data := 0.U(addrWidth.W)
+				cons.write.ready := false.B
+			}
+		})
+
+		// clear the current consumer
+		channelState.map(_ := ChannelStates.IDLE)
+		currentConsumer.map(_ := 0.U)
+		channelServingConsumer := 0.U
+  }
+
+  // hardware loop through the channels and check thier states.
   for (i <- 0 until numChannels) {
-	 io.channels(i).read.bits.address := 0.U
-	 io.channels(i).read.bits.data := 0.U
-	 io.channels(i).write.bits.address := 0.U
-	 io.channels(i).write.bits.data := 0.U
-	 io.channels(i).read.valid := false.B
-	 io.channels(i).write.valid := true.B 
+	// check the channel state
+	channelState(i) match {
+	  case ChannelStates.IDLE =>
+		// if the channel is idle, check if there is a consumer ready to read
+		for (j <- 0 until numConsumers) {
+		  when(io.consumers(j).read.valid) {
+			channelState(i) := ChannelStates.RELAY_READ
+			currentConsumer(i) := j.U
+			io.consumers(j).read.ready := true.B
+		  }
+		}
+	  case ChannelStates.RELAY_READ =>
+		// if the channel is relaying a read request, check if the channel is ready to read
+		when(io.channels(i).read.ready) {
+		  io.channels(i).read.bits.address := io.consumers(currentConsumer(i)).read.bits.address
+		  io.channels(i).read.valid := true.B
+		  channelState(i) := ChannelStates.READING
+		}
+	  case ChannelStates.READING =>
+		// if the channel is reading, check if the read data is valid
+		when(io.channels(i).read.valid) {
+		  io.consumers(currentConsumer(i)).read.bits.data := io.channels(i).read.bits.data
+		  io.consumers(currentConsumer(i)).read.valid := true.B
+		  channelState(i) := ChannelStates.IDLE
+		}
+	  case _ => // do nothing
+	}
   }
 
   for (i <- 0 until numConsumers) {
-	 io.consumers(i).read.ready := false.B
-	 io.consumers(i).write.ready := false.B
+	io.consumers(i).read.bits.address := 0.U
   }
-  when(io.consumers(0).read.valid) {
-	 io.consumers(0).read.ready := true.B
-	 io.consumers(0).write.ready := true.B
+
+  for (i <- 0 until numChannels) {
+	io.channels(i).read.bits.data := 0.U
   }
 
 }
