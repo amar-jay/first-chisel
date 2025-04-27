@@ -1,3 +1,14 @@
+error id: file://<WORKSPACE>/mini-gpu/dispatch.scala:77
+file://<WORKSPACE>/mini-gpu/dispatch.scala
+empty definition using pc, found symbol in pc: 
+semanticdb not found
+empty definition using fallback
+non-local guesses:
+
+offset: 2727
+uri: file://<WORKSPACE>/mini-gpu/dispatch.scala
+text:
+```scala
 //> using scala "2.13.12"
 //> using dep "org.chipsalliance::chisel:6.7.0"
 //> using dep "edu.berkeley.cs::chiseltest:6.0.0"  // ✅ Chisel test lib
@@ -75,7 +86,7 @@ class Dispatcher(
   io.consumers.foreach { consumer =>
     consumer.read.ready := false.B
     consumer.read.bits.data := DontCare
-    consumer.write.ready := false.B
+    consumer.write.ready := false@@.B
   }
 
   io.channels.foreach { channel =>
@@ -86,18 +97,17 @@ class Dispatcher(
     channel.write.bits.data := 0.U
   }
 
-  var requestFound = Reg(Bool())
   for (i <- 0 until numChannels) {
     switch(channelState(i)) {
       is(ChannelStates.IDLE) {
-        requestFound := false.B
+        var requestFound = false.B
         for (j <- 0 until numConsumers) {
           // Check for read request first
           when(!requestFound && io.consumers(j).read.valid) {
             requestFound := true.B
             currentConsumer(i) := j.U
             readAddressReg(i) := io.consumers(j).read.bits.address
-            io.consumers(j).read.ready := true.B
+            io.consumers(j).read.valid := true.B
             channelState(i) := ChannelStates.RELAY_READ
           // If no read request, check for write
           }.elsewhen(!requestFound && io.consumers(j).write.valid) {
@@ -143,3 +153,9 @@ object Main extends App {
     )
   )
 }
+```
+
+
+#### Short summary: 
+
+empty definition using pc, found symbol in pc: 
