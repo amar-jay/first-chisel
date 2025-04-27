@@ -19,26 +19,35 @@ object ChannelStates extends ChiselEnum {
 }
 
 class ConsumerIO(dataWidth:Int, addrWidth: Int) extends Bundle {
-	val read = Decoupled(new Bundle {
-		val address = Input(UInt(addrWidth.W))
-		val data = Output(UInt(dataWidth.W))
-	})
+	val read = new Bundle {
+    val ready = Output(Bool())
+    val valid = Input(Bool())
+    val bits = new Bundle {
+      val address = Input(UInt(addrWidth.W))
+      val data = Output(UInt(dataWidth.W))
+    }
+  }
+  
 
 	val write = Flipped(Decoupled(new Bundle {
-		val address = Input(UInt(addrWidth.W))
-		val data = Input(UInt(dataWidth.W))
+		val address = UInt(addrWidth.W)
+		val data = UInt(dataWidth.W)
 	}))
 }
 
 class ChannelIO(dataWidth:Int, addrWidth: Int) extends Bundle {
-	val read = Decoupled(new Bundle {
-		val address = Output(UInt(addrWidth.W))
-		val data = Input(UInt(dataWidth.W))
-	})
+	val read = new Bundle {
+    val ready = Input(Bool())
+    val valid = Output(Bool())
+    val bits = new Bundle {
+      val address = Output(UInt(addrWidth.W))
+      val data = Input(UInt(dataWidth.W))
+    }
+  }
 
-	val write = Valid(new Bundle {
-		val address = Output(UInt(addrWidth.W))
-		val data = Output(UInt(dataWidth.W))
+	val write = Decoupled(new Bundle {
+		val address = UInt(addrWidth.W)
+		val data = UInt(dataWidth.W)
 	})
 }
 
@@ -68,20 +77,20 @@ class Dispatcher(
 	// clear the channel state
 		io.channels.map({
 			ch => {
-				ch.read.bits.address := 0.U
+				ch.read.bits.address := 0.U(addrWidth.W)
 				ch.read.valid := false.B
 
 				ch.write.valid := false.B
 				ch.write.bits.address := 0.U
-				ch.write.bits.data := 0.U
+				ch.write.bits.data := 0.U(dataWidth.W)
 			}
 		})
 
 
 		io.consumers.map({
 			cons => {
-				cons.read.valid := false.B
-				cons.read.bits.data := 0.U(addrWidth.W)
+				cons.read.ready := false.B
+				cons.read.bits.data := 0.U
 				cons.write.ready := false.B
 			}
 		})
@@ -106,9 +115,9 @@ class Dispatcher(
 		  }
 		}
 	  case ChannelStates.RELAY_READ =>
-		// if the channel is relaying a read request, check if the channel is ready to read
+	// if the channel is relaying a read request, check if the channel is ready to read
 		when(io.channels(i).read.ready) {
-		  io.channels(i).read.bits.address := io.consumers(currentConsumer(i)).read.bits.address
+		//   io.channels(i).read.bits.address := io.consumers(currentConsumer(i)).read.bits.address
 		  io.channels(i).read.valid := true.B
 		  channelState(i) := ChannelStates.READING
 		}
@@ -122,15 +131,6 @@ class Dispatcher(
 	  case _ => // do nothing
 	}
   }
-
-  for (i <- 0 until numConsumers) {
-	io.consumers(i).read.bits.address := 0.U
-  }
-
-  for (i <- 0 until numChannels) {
-	io.channels(i).read.bits.data := 0.U
-  }
-
 }
 
 object Main extends App {

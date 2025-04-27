@@ -2,33 +2,33 @@
 module Dispatcher(
   input         clock,
                 reset,
-                io_consumers_0_read_ready,
-  output        io_consumers_0_read_valid,
-  output [7:0]  io_consumers_0_read_bits_address,
+  output        io_consumers_0_read_ready,
+  input         io_consumers_0_read_valid,
+  input  [7:0]  io_consumers_0_read_bits_address,
   output [31:0] io_consumers_0_read_bits_data,
   output        io_consumers_0_write_ready,
   input         io_consumers_0_write_valid,
   input  [7:0]  io_consumers_0_write_bits_address,
   input  [31:0] io_consumers_0_write_bits_data,
-  input         io_consumers_1_read_ready,
-  output        io_consumers_1_read_valid,
-  output [7:0]  io_consumers_1_read_bits_address,
+  output        io_consumers_1_read_ready,
+  input         io_consumers_1_read_valid,
+  input  [7:0]  io_consumers_1_read_bits_address,
   output [31:0] io_consumers_1_read_bits_data,
   output        io_consumers_1_write_ready,
   input         io_consumers_1_write_valid,
   input  [7:0]  io_consumers_1_write_bits_address,
   input  [31:0] io_consumers_1_write_bits_data,
-  input         io_consumers_2_read_ready,
-  output        io_consumers_2_read_valid,
-  output [7:0]  io_consumers_2_read_bits_address,
+  output        io_consumers_2_read_ready,
+  input         io_consumers_2_read_valid,
+  input  [7:0]  io_consumers_2_read_bits_address,
   output [31:0] io_consumers_2_read_bits_data,
   output        io_consumers_2_write_ready,
   input         io_consumers_2_write_valid,
   input  [7:0]  io_consumers_2_write_bits_address,
   input  [31:0] io_consumers_2_write_bits_data,
-  input         io_consumers_3_read_ready,
-  output        io_consumers_3_read_valid,
-  output [7:0]  io_consumers_3_read_bits_address,
+  output        io_consumers_3_read_ready,
+  input         io_consumers_3_read_valid,
+  input  [7:0]  io_consumers_3_read_bits_address,
   output [31:0] io_consumers_3_read_bits_data,
   output        io_consumers_3_write_ready,
   input         io_consumers_3_write_valid,
@@ -37,44 +37,40 @@ module Dispatcher(
   input         io_channels_0_read_ready,
   output        io_channels_0_read_valid,
   output [7:0]  io_channels_0_read_bits_address,
-  output [31:0] io_channels_0_read_bits_data,
+  input  [31:0] io_channels_0_read_bits_data,
+  input         io_channels_0_write_ready,
   output        io_channels_0_write_valid,
   output [7:0]  io_channels_0_write_bits_address,
   output [31:0] io_channels_0_write_bits_data,
   input         io_channels_1_read_ready,
   output        io_channels_1_read_valid,
   output [7:0]  io_channels_1_read_bits_address,
-  output [31:0] io_channels_1_read_bits_data,
+  input  [31:0] io_channels_1_read_bits_data,
+  input         io_channels_1_write_ready,
   output        io_channels_1_write_valid,
   output [7:0]  io_channels_1_write_bits_address,
   output [31:0] io_channels_1_write_bits_data
 );
 
-  assign io_consumers_0_read_valid = 1'h0;
-  assign io_consumers_0_read_bits_address = 8'h0;
+  assign io_consumers_0_read_ready = 1'h0;
   assign io_consumers_0_read_bits_data = 32'h0;
   assign io_consumers_0_write_ready = 1'h0;
-  assign io_consumers_1_read_valid = 1'h0;
-  assign io_consumers_1_read_bits_address = 8'h0;
+  assign io_consumers_1_read_ready = 1'h0;
   assign io_consumers_1_read_bits_data = 32'h0;
   assign io_consumers_1_write_ready = 1'h0;
-  assign io_consumers_2_read_valid = 1'h0;
-  assign io_consumers_2_read_bits_address = 8'h0;
+  assign io_consumers_2_read_ready = 1'h0;
   assign io_consumers_2_read_bits_data = 32'h0;
   assign io_consumers_2_write_ready = 1'h0;
-  assign io_consumers_3_read_valid = 1'h0;
-  assign io_consumers_3_read_bits_address = 8'h0;
+  assign io_consumers_3_read_ready = 1'h0;
   assign io_consumers_3_read_bits_data = 32'h0;
   assign io_consumers_3_write_ready = 1'h0;
   assign io_channels_0_read_valid = 1'h0;
   assign io_channels_0_read_bits_address = 8'h0;
-  assign io_channels_0_read_bits_data = 32'h0;
   assign io_channels_0_write_valid = 1'h0;
   assign io_channels_0_write_bits_address = 8'h0;
   assign io_channels_0_write_bits_data = 32'h0;
   assign io_channels_1_read_valid = 1'h0;
   assign io_channels_1_read_bits_address = 8'h0;
-  assign io_channels_1_read_bits_data = 32'h0;
   assign io_channels_1_write_valid = 1'h0;
   assign io_channels_1_write_bits_address = 8'h0;
   assign io_channels_1_write_bits_data = 32'h0;
