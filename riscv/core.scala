@@ -112,10 +112,9 @@ class RISCVCore extends Module {
 	alu.io.a := rs1_data
 	alu.io.b := rs2_data
 	alu.io.op := InstructionToALU.getALUOp(inst_fetcher.io._op)
-
+	// print a and b values
 	rd_data := alu.io.result
-   // Connect output to IO
-   io.rddata := rd_data.asSInt
+
 
     // Instruction-specific handling
     switch(inst_fetcher.io.inst_type) {
@@ -227,6 +226,9 @@ class RISCVCore extends Module {
 			}
 		}
 	} 
+
+	// Connect output to IO
+   io.rddata := rd_data.asSInt
 }
 
 object Main extends App {
@@ -236,4 +238,256 @@ object Main extends App {
       firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
     )
   )
+}
+
+class RISCVCoreTest extends AnyFlatSpec with ChiselScalatestTester {
+	behavior of "RISCVCore"
+
+	// Helper functions to create different instruction types
+	def makeRType(opcode: Int, funct3: Int, funct7: Int, rs1: Int, rs2: Int, rd: Int): Int =  {
+		((funct7 & 0x7F) << 25) | ((rs2 & 0x1F) << 20) | ((rs1 & 0x1F) << 15) | 
+		((funct3 & 0x7) << 12) | ((rd & 0x1F) << 7) | (opcode & 0x7F)
+	}
+	
+	def makeIType(opcode: Int, funct3: Int, imm: Int, rs1: Int, rd: Int): Int = {
+		((imm & 0xFFF) << 20) | ((rs1 & 0x1F) << 15) | ((funct3 & 0x7) << 12) | 
+		((rd & 0x1F) << 7) | (opcode & 0x7F)
+	}
+	
+	def makeSType(opcode: Int, funct3: Int, imm: Int, rs1: Int, rs2: Int): Int = {
+		(((imm >> 5) & 0x7F) << 25) | ((rs2 & 0x1F) << 20) | ((rs1 & 0x1F) << 15) | 
+		((funct3 & 0x7) << 12) | ((imm & 0x1F) << 7) | (opcode & 0x7F)
+	}
+	
+	def makeBType(opcode: Int, funct3: Int, imm: Int, rs1: Int, rs2: Int): Int = {
+		(((imm >> 12) & 0x1) << 31) | (((imm >> 5) & 0x3F) << 25) | ((rs2 & 0x1F) << 20) | 
+		((rs1 & 0x1F) << 15) | ((funct3 & 0x7) << 12) | (((imm >> 1) & 0xF) << 8) | 
+		(((imm >> 11) & 0x1) << 7) | (opcode & 0x7F)
+	}
+	
+	def makeUType(opcode: Int, imm: Int, rd: Int): Int = {
+		((imm & 0xFFFFF) << 12) | ((rd & 0x1F) << 7) | (opcode & 0x7F)
+	}
+	
+	def makeJType(opcode: Int, imm: Int, rd: Int): Int = {
+		(((imm >> 20) & 0x1) << 31) | (((imm >> 1) & 0x3FF) << 21) | 
+		(((imm >> 11) & 0x1) << 20) | (((imm >> 12) & 0xFF) << 12) | 
+		((rd & 0x1F) << 7) | (opcode & 0x7F)
+	}
+
+	// Test R-type instructions
+	it should "correctly execute ADD instruction" in {
+		test(new RISCVCore()) { dut =>
+			// First load values into registers
+			// ADDI x1, x0, 10 (x1 = 10)
+			val addi_x1:Int= makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 10, 0, 1)
+			dut.io.inst.poke(addi_x1.U)
+			dut.clock.step(1)
+			dut.io.rddata.expect(10.S)
+			
+			// ADDI x2, x0, 20 (x2 = 20)
+			val addi_x2 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 20, 0, 2)
+			dut.io.inst.poke(addi_x2.U)
+			dut.clock.step(1)
+			
+			// ADD x3, x1, x2 (x3 = x1 + x2 = 30)
+			val add = makeRType(Opcodes.R_TYPE.litValue.toInt, 0, 0, 1, 2, 3)
+			dut.io.inst.poke(add.U)
+			dut.clock.step(1)
+			dut.io.rddata.expect(30.S)
+		}
+	}
+
+	it should "correctly execute SUB instruction" in {
+		test(new RISCVCore()) { dut =>
+			// First load values into registers
+			// ADDI x1, x0, 30 (x1 = 30)
+			val addi_x1 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 30, 0, 1)
+			dut.io.inst.poke(addi_x1.U)
+			dut.clock.step(1)
+			
+			// ADDI x2, x0, 12 (x2 = 12)
+			val addi_x2 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 12, 0, 2)
+			dut.io.inst.poke(addi_x2.U)
+			dut.clock.step(1)
+			
+			// SUB x3, x1, x2 (x3 = x1 - x2 = 18)
+			val sub = makeRType(Opcodes.R_TYPE.litValue.toInt, 0, 0x20, 1, 2, 3)
+			dut.io.inst.poke(sub.U)
+			dut.clock.step(1)
+			dut.io.rddata.expect(18.S)
+		}
+	}
+
+	// Test I-type instructions
+	it should "correctly execute ADDI instruction" in {
+		test(new RISCVCore()) { dut =>
+			// ADDI x1, x0, 42 (x1 = 42)
+			val addi = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 42, 0, 1)
+			dut.io.inst.poke(addi.U)
+			dut.clock.step(1)
+			dut.io.rddata.expect(42.S)
+		}
+	}
+
+	// Test immediate with sign extension
+	it should "handle negative immediates correctly" in {
+		test(new RISCVCore()) { dut =>
+			// ADDI x1, x0, -15 (x1 = -15)
+			val addi = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 0xFFF1, 0, 1) // 0xFFF1 is -15 in 12-bit two's complement
+			dut.io.inst.poke(addi.U)
+			dut.clock.step(1)
+			dut.io.rddata.expect(-15.S)
+		}
+	}
+
+	// Test logical operations
+	it should "correctly execute AND, OR, XOR instructions" in {
+		test(new RISCVCore()) { dut =>
+			// Load test values
+			// ADDI x1, x0, 0x0F (x1 = 0x0F)
+			val addi_x1 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 0x0F, 0, 1)
+			dut.io.inst.poke(addi_x1.U)
+			dut.clock.step(1)
+			
+			// ADDI x2, x0, 0xF0 (x2 = 0xF0)
+			val addi_x2 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 0xF0, 0, 2)
+			dut.io.inst.poke(addi_x2.U)
+			dut.clock.step(1)
+			
+			// AND x3, x1, x2 (x3 = 0x0F & 0xF0 = 0)
+			val and = makeRType(Opcodes.R_TYPE.litValue.toInt, 7, 0, 1, 2, 3)
+			dut.io.inst.poke(and.U)
+			dut.clock.step(1)
+			dut.io.rddata.expect(0.S)
+			
+			// OR x3, x1, x2 (x3 = 0x0F | 0xF0 = 0xFF)
+			val or = makeRType(Opcodes.R_TYPE.litValue.toInt, 6, 0, 1, 2, 3)
+			dut.io.inst.poke(or.U)
+			dut.clock.step(1)
+			dut.io.rddata.expect(0xFF.S)
+			
+			// XOR x3, x1, x2 (x3 = 0x0F ^ 0xF0 = 0xFF)
+			val xor = makeRType(Opcodes.R_TYPE.litValue.toInt, 4, 0, 1, 2, 3)
+			dut.io.inst.poke(xor.U)
+			dut.clock.step(1)
+			dut.io.rddata.expect(0xFF.S)
+		}
+	}
+
+	// Test U-type instructions
+	it should "correctly execute LUI instruction" in {
+		test(new RISCVCore()) { dut =>
+			// LUI x1, 0x12345 (x1 = 0x12345000)
+			val lui = makeUType(Opcodes.U_TYPE1.litValue.toInt, 0x12345, 1)
+			dut.io.inst.poke(lui.U)
+			dut.clock.step(1)
+			dut.io.rddata.expect(0x12345000.S)
+		}
+	}
+
+	// Test J-type instructions (JAL)
+	it should "correctly execute JAL instruction" in {
+		test(new RISCVCore()) { dut =>
+			// Initial PC = 0
+			// JAL x1, 16 (x1 = 4, PC = 16)
+			val jal = makeJType(Opcodes.J_TYPE.litValue.toInt, 16, 1)
+			dut.io.inst.poke(jal.U)
+			dut.clock.step(1)
+			dut.io.rddata.expect(4.S) // Return address should be PC+4 (0+4=4)
+		}
+	}
+
+	// Test branch instructions
+	it should "correctly execute BEQ instruction" in {
+		test(new RISCVCore()) { dut =>
+			// Load identical values in two registers
+			// ADDI x1, x0, 5 (x1 = 5)
+			val addi_x1 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 5, 0, 1)
+			dut.io.inst.poke(addi_x1.U)
+			dut.clock.step(1)
+			
+			// ADDI x2, x0, 5 (x2 = 5)
+			val addi_x2 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 5, 0, 2)
+			dut.io.inst.poke(addi_x2.U)
+			dut.clock.step(1)
+			
+			// BEQ x1, x2, 8 (Branch if x1 == x2, which is true)
+			val beq = makeBType(Opcodes.B_TYPE.litValue.toInt, 0, 8, 1, 2)
+			dut.io.inst.poke(beq.U)
+			dut.clock.step(1)
+			
+			// JAL x1, 0 (This just captures PC value in x1 to verify branch was taken)
+			val jal = makeJType(Opcodes.I_TYPE3.litValue.toInt, 0, 1)
+			dut.io.inst.poke(jal.U)
+			dut.clock.step(1)
+			
+			// If branch was taken, PC should be 12 (4 + 8), and x1 should equal 16
+			dut.io.rddata.expect(16.S)
+		}
+	}
+
+	// Test factorial calculation
+	it should "calculate factorial correctly" in {
+		test(new RISCVCore()) { dut =>
+			// This is a more complex test that calculates 5! using our core
+			
+			// Initialize x1 = 5 (n)
+			val addi_x1 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 5, 0, 1)
+			dut.io.inst.poke(addi_x1.U)
+			dut.clock.step(1)
+			
+			// Initialize x2 = 1 (result)
+			val addi_x2 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 1, 0, 2)
+			dut.io.inst.poke(addi_x2.U)
+			dut.clock.step(1)
+			
+			// Loop:
+			// MUL x2, x2, x1 (result = result * n)
+			val mul = makeRType(Opcodes.R_TYPE.litValue.toInt, 0, 1, 2, 1, 2)
+			dut.io.inst.poke(mul.U)
+			dut.clock.step(1)
+			
+			// ADDI x1, x1, -1 (n--)
+			val dec_x1 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, -1, 1, 1) 
+			dut.io.inst.poke(dec_x1.U)
+			dut.clock.step(1)
+			
+			// MUL x2, x2, x1 (result = result * (n-1))
+			dut.io.inst.poke(mul.U)
+			dut.clock.step(1)
+			
+			// ADDI x1, x1, -1 (n--)
+			dut.io.inst.poke(dec_x1.U)
+			dut.clock.step(1)
+			
+			// MUL x2, x2, x1 (result = result * (n-2))
+			dut.io.inst.poke(mul.U)
+			dut.clock.step(1)
+			
+			// ADDI x1, x1, -1 (n--)
+			dut.io.inst.poke(dec_x1.U)
+			dut.clock.step(1)
+			
+			// MUL x2, x2, x1 (result = result * (n-3))
+			dut.io.inst.poke(mul.U)
+			dut.clock.step(1)
+			
+			// ADDI x1, x1, -1 (n--)
+			dut.io.inst.poke(dec_x1.U)
+			dut.clock.step(1)
+			
+			// MUL x2, x2, x1 (result = result * (n-4) = 5!)
+			dut.io.inst.poke(mul.U)
+			dut.clock.step(1)
+			
+			// ADDI x3, x2, 0 (Copy result to x3 for output)
+			val addi_x3 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 0, 2, 3)
+			dut.io.inst.poke(addi_x3.U)
+			dut.clock.step(1)
+			
+			// 5! = 120
+			dut.io.rddata.expect(120.S)
+		}
+	}
 }

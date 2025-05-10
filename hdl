@@ -38,31 +38,61 @@ validate_dependencies() {
 
 validate_scala_file() {
     local file_path=$1
+
+    # if the path is a directory, append all the scala files in it
+    if [ -d "$file_path" ]; then
+        file_path=$(find "$file_path" -type f -name "*$SCALA_EXT")
+        # one line file path
+        file_path=$(echo "$file_path" | tr '\n' ' ')
+        if [ -z "$file_path" ]; then
+            error "No Scala files found in directory: ${file_path}"
+            exit 1
+        fi
+
+        # on exit restore the previous directory
+        # trap 'cd -' EXIT
+        return 0
+    fi
+
+
+    # if the path is not absolute, resolve it to the absolute path
     if [[ ! "$file_path" =~ \.scala$ ]]; then
         file_path="${file_path}${SCALA_EXT}"
     fi
     
     if [ ! -f "$file_path" ]; then
         error "Scala file not found: ${file_path}"
-        exit 1
+        # exit 1
     fi
+
     
     echo "$file_path"
+
+    # return "$file_path"
 }
 
 generate_hdl() {
     local input_file=$1
     local output_type=$2
     local target_dir=$3
+
+    printf "Generating %s from %s\n" "$output_filename" "$input_file"
+    local output_filename="${input_file%.*}"
+    if [ -z "$input_file" ]; then
+        output_filename="$(basename "$PWD")"
+    fi
     
     local ext="v"
     [[ "$output_type" == "systemverilog" ]] && ext="sv"
     
-    local output_file="${target_dir}/$(basename "${input_file%.*}").${ext}"
-    
+    printf "Output filename: %s\n" "$output_filename"
+    local output_file="${target_dir}/$(basename "${output_filename}").${ext}"
     info "Generating ${output_type} from ${input_file}"
-    mkdir -p "$target_dir"
-    scala-cli "$input_file" > "$output_file"
+    mkdir -p "$target_dir"  
+    scala-cli "$input_file" \
+        --output "$output_file" \
+        --target "$output_type" \
+        --verbose
     
     if [ $? -eq 0 ]; then
         success "Generated: ${output_file}"
