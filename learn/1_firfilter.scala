@@ -11,6 +11,27 @@ import org.scalatest.flatspec.AnyFlatSpec
 // _root_ disambiguates from package chisel3.util.circt if user imports chisel3.util._
 import _root_.circt.stage.ChiselStage
 
+/**
+  * This Scala file defines a Chisel module for a Finite Impulse Response (FIR) filter.
+  *
+  * The `FirFilter` class:
+  * - Implements a parameterized FIR filter with configurable bit width and convolution coefficients.
+  * - Uses a shift register (`z`) to store previous input values for convolution.
+  * - Computes the output as the dot product of the input history and the coefficient sequence.
+  *
+  * The `Main` object:
+  * - Generates SystemVerilog code for different FIR filter configurations.
+  * - Includes examples such as moving average, delay, triangular impulse response, and edge detection.
+  *
+  * The `FirFilterTest` class:
+  * - Contains unit tests to verify the functionality of the FIR filter with various coefficient sets.
+  * - Uses the ChiselTest library for simulation and validation.
+  *
+  * Notes:
+  * - The design is fully parameterized, making it reusable for different filter configurations.
+  * - The generated SystemVerilog can be used for hardware synthesis or simulation.
+  */
+
 // create a FIR filter using convolution coefficients
 class FirFilter(bitWidth: Int, seq: Seq[UInt]) extends Module {
   val io = IO(new Bundle {

@@ -17,19 +17,21 @@ object ChannelStates extends ChiselEnum {
   val IDLE, READING, WRITING, RELAY_READ, RELAY_WRITE = Value
 }
 
-class ConsumerIO(dataWidth: Int, addrWidth: Int) extends Bundle {
-  val read = new Bundle {
-    val ready = Output(Bool())
-    val valid = Input(Bool())
-    val bits = new Bundle {
-      val address = Input(UInt(addrWidth.W))
-      val data = Output(UInt(dataWidth.W))
-    }
+class ConsumerIO(numConsumers:Int, dataWidth: Int, addrWidth: Int) extends Bundle {
+  val read_ = new Bundle {
+	 val ready = Output(Vec(numConsumers, Bool()))
+	 val valid = Input(Vec(numConsumers, Bool()))
+	 val address = Input(Vec(numConsumers, UInt(addrWidth.W)))
+	 val data = Output(Vec(numConsumers, UInt(dataWidth.W)))
   }
-  val write = Flipped(Decoupled(new Bundle {
-    val address = UInt(addrWidth.W)
-    val data = UInt(dataWidth.W)
-  }))
+
+  val write_ = new Bundle {
+	 val ready = Output(Vec(numConsumers, Bool()))
+	 val valid = Input(Vec(numConsumers, Bool()))
+	 val address = Input(Vec(numConsumers, UInt(addrWidth.W)))
+	 val data = Input(Vec(numConsumers, UInt(dataWidth.W)))
+  }
+
 }
 
 /***
@@ -39,19 +41,21 @@ class ConsumerIO(dataWidth: Int, addrWidth: Int) extends Bundle {
  * the channel is based on the bandwidth of memory
  */
 
-class ChannelIO(dataWidth: Int, addrWidth: Int) extends Bundle {
-  val read = new Bundle {
-    val ready = Input(Bool())
-    val valid = Output(Bool())
-    val bits = new Bundle {
-      val address = Output(UInt(addrWidth.W))
-      val data = Input(UInt(dataWidth.W))
-    }
+class ChannelIO(numChannels:Int, dataWidth: Int, addrWidth: Int) extends Bundle {
+
+  val read_ = new Bundle {
+	val ready = Input(Vec(numChannels, Bool()))
+  	val valid = Output(Vec(numChannels, Bool())) // use a much more efficient method
+	val address = Output(Vec(numChannels, UInt(addrWidth.W)))
+	val data = Input(Vec(numChannels, UInt(dataWidth.W)))
   }
-  val write = Decoupled(new Bundle {
-    val address = UInt(addrWidth.W)
-    val data = UInt(dataWidth.W)
-  })
+
+  val write_ = new Bundle {
+	val ready = Input(Vec(numChannels, Bool()))
+  	val valid = Output(Vec(numChannels, Bool()))
+	val address = Output(Vec(numChannels, UInt(addrWidth.W)))
+	val data = Output(Vec(numChannels, UInt(dataWidth.W)))
+  }
 }
 
 class Dispatcher(
@@ -61,8 +65,8 @@ class Dispatcher(
     addrWidth: Int
 ) extends Module {
   val io = IO(new Bundle {
-    val consumers = Vec(numConsumers, new ConsumerIO(dataWidth, addrWidth))
-    val channels = Vec(numChannels, new ChannelIO(dataWidth, addrWidth))
+    val consumers = new ConsumerIO(numConsumers, dataWidth, addrWidth)
+    val channels =  new ChannelIO(numChannels, dataWidth, addrWidth)
   })
 
   val channelState = RegInit(VecInit(Seq.fill(numChannels){ChannelStates.IDLE}))
@@ -72,18 +76,17 @@ class Dispatcher(
   val writeDataReg = RegInit(VecInit(Seq.fill(numChannels)(0.U(dataWidth.W))))
 
   // Default values for consumer and channel interfaces
-  io.consumers.foreach { consumer =>
-    consumer.read.ready := false.B
-    consumer.read.bits.data := DontCare
-    consumer.write.ready := false.B
+  for (i <- 0 until numConsumers) {
+	io.consumers.read_.ready(i) := false.B
+	io.consumers.write_.ready(i) := false.B
+	io.consumers.read_.data(i) := DontCare
   }
-
-  io.channels.foreach { channel =>
-    channel.read.valid := false.B
-    channel.read.bits.address := 0.U
-    channel.write.valid := false.B
-    channel.write.bits.address := 0.U
-    channel.write.bits.data := 0.U
+  for (i <- 0 until numChannels) {
+	 io.channels.read_.valid(i) := false.B
+	 io.channels.read_.address(i) := DontCare
+	 io.channels.write_.valid(i) := false.B
+	 io.channels.write_.address(i) := 0.U
+	 io.channels.write_.data(i) := 0.U
   }
 
   var requestFound = Reg(Bool())
@@ -93,41 +96,41 @@ class Dispatcher(
         requestFound := false.B
         for (j <- 0 until numConsumers) {
           // Check for read request first
-          when(!requestFound && io.consumers(j).read.valid) {
+          when(!requestFound && io.consumers.read_.valid(j)) {
             requestFound := true.B
             currentConsumer(i) := j.U
-            readAddressReg(i) := io.consumers(j).read.bits.address
-            io.consumers(j).read.ready := true.B
+            readAddressReg(i) := io.consumers.read_.address(j)
+            io.consumers.read_.ready(j) := true.B
             channelState(i) := ChannelStates.RELAY_READ
           // If no read request, check for write
-          }.elsewhen(!requestFound && io.consumers(j).write.valid) {
+          }.elsewhen(!requestFound && io.consumers.write_.valid(j)) {
             requestFound := true.B
             currentConsumer(i) := j.U
-            writeAddressReg(i) := io.consumers(j).write.bits.address
-            writeDataReg(i) := io.consumers(j).write.bits.data
-            io.consumers(j).write.ready := true.B
+            writeAddressReg(i) := io.consumers.write_.address(j)
+            writeDataReg(i) := io.consumers.write_.data(j)
+            io.consumers.write_.ready(j) := true.B
             channelState(i) := ChannelStates.RELAY_WRITE
           }
         }
       }
       is(ChannelStates.RELAY_READ) {
-        io.channels(i).read.valid := true.B
-        io.channels(i).read.bits.address := readAddressReg(i)
-        when(io.channels(i).read.ready) {
+        io.channels.read_.valid(i) := true.B
+        io.channels.read_.address(i) := readAddressReg(i)
+        when(io.channels.read_.ready(i)) {
           channelState(i) := ChannelStates.READING
         }
       }
       is(ChannelStates.READING) {
-        when(io.channels(i).read.valid) {
-          io.consumers(currentConsumer(i)).read.bits.data := io.channels(i).read.bits.data
+        when(io.channels.read_.valid(i)) {
+          io.consumers.read_.data(currentConsumer(i)) := io.channels.read_.data(i)
           channelState(i) := ChannelStates.IDLE
         }
       }
       is(ChannelStates.RELAY_WRITE) {
-        io.channels(i).write.valid := true.B
-        io.channels(i).write.bits.address := writeAddressReg(i)
-        io.channels(i).write.bits.data := writeDataReg(i)
-        when(io.channels(i).write.ready) {
+        io.channels.write_.valid(i) := true.B
+        io.channels.write_.address(i) := writeAddressReg(i)
+        io.channels.write_.data(i) := writeDataReg(i)
+        when(io.channels.write_.ready(i)) {
           channelState(i) := ChannelStates.IDLE
         }
       }

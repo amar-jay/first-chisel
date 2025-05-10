@@ -2,54 +2,54 @@
 module Dispatcher(
   input         clock,
                 reset,
-  output        io_consumers_0_read_ready,
-  input         io_consumers_0_read_valid,
-  input  [31:0] io_consumers_0_read_bits_address,
-  output [7:0]  io_consumers_0_read_bits_data,
-  output        io_consumers_0_write_ready,
-  input         io_consumers_0_write_valid,
-  input  [31:0] io_consumers_0_write_bits_address,
-  input  [7:0]  io_consumers_0_write_bits_data,
-  output        io_consumers_1_read_ready,
-  input         io_consumers_1_read_valid,
-  input  [31:0] io_consumers_1_read_bits_address,
-  output [7:0]  io_consumers_1_read_bits_data,
-  output        io_consumers_1_write_ready,
-  input         io_consumers_1_write_valid,
-  input  [31:0] io_consumers_1_write_bits_address,
-  input  [7:0]  io_consumers_1_write_bits_data,
-  output        io_consumers_2_read_ready,
-  input         io_consumers_2_read_valid,
-  input  [31:0] io_consumers_2_read_bits_address,
-  output [7:0]  io_consumers_2_read_bits_data,
-  output        io_consumers_2_write_ready,
-  input         io_consumers_2_write_valid,
-  input  [31:0] io_consumers_2_write_bits_address,
-  input  [7:0]  io_consumers_2_write_bits_data,
-  output        io_consumers_3_read_ready,
-  input         io_consumers_3_read_valid,
-  input  [31:0] io_consumers_3_read_bits_address,
-  output [7:0]  io_consumers_3_read_bits_data,
-  output        io_consumers_3_write_ready,
-  input         io_consumers_3_write_valid,
-  input  [31:0] io_consumers_3_write_bits_address,
-  input  [7:0]  io_consumers_3_write_bits_data,
-  input         io_channels_0_read_ready,
-  output        io_channels_0_read_valid,
-  output [31:0] io_channels_0_read_bits_address,
-  input  [7:0]  io_channels_0_read_bits_data,
-  input         io_channels_0_write_ready,
-  output        io_channels_0_write_valid,
-  output [31:0] io_channels_0_write_bits_address,
-  output [7:0]  io_channels_0_write_bits_data,
-  input         io_channels_1_read_ready,
-  output        io_channels_1_read_valid,
-  output [31:0] io_channels_1_read_bits_address,
-  input  [7:0]  io_channels_1_read_bits_data,
-  input         io_channels_1_write_ready,
-  output        io_channels_1_write_valid,
-  output [31:0] io_channels_1_write_bits_address,
-  output [7:0]  io_channels_1_write_bits_data
+  output        io_consumers_read__ready_0,
+                io_consumers_read__ready_1,
+                io_consumers_read__ready_2,
+                io_consumers_read__ready_3,
+  input         io_consumers_read__valid_0,
+                io_consumers_read__valid_1,
+                io_consumers_read__valid_2,
+                io_consumers_read__valid_3,
+  input  [31:0] io_consumers_read__address_0,
+                io_consumers_read__address_1,
+                io_consumers_read__address_2,
+                io_consumers_read__address_3,
+  output [7:0]  io_consumers_read__data_0,
+                io_consumers_read__data_1,
+                io_consumers_read__data_2,
+                io_consumers_read__data_3,
+  output        io_consumers_write__ready_0,
+                io_consumers_write__ready_1,
+                io_consumers_write__ready_2,
+                io_consumers_write__ready_3,
+  input         io_consumers_write__valid_0,
+                io_consumers_write__valid_1,
+                io_consumers_write__valid_2,
+                io_consumers_write__valid_3,
+  input  [31:0] io_consumers_write__address_0,
+                io_consumers_write__address_1,
+                io_consumers_write__address_2,
+                io_consumers_write__address_3,
+  input  [7:0]  io_consumers_write__data_0,
+                io_consumers_write__data_1,
+                io_consumers_write__data_2,
+                io_consumers_write__data_3,
+  input         io_channels_read__ready_0,
+                io_channels_read__ready_1,
+  output        io_channels_read__valid_0,
+                io_channels_read__valid_1,
+  output [31:0] io_channels_read__address_0,
+                io_channels_read__address_1,
+  input  [7:0]  io_channels_read__data_0,
+                io_channels_read__data_1,
+  input         io_channels_write__ready_0,
+                io_channels_write__ready_1,
+  output        io_channels_write__valid_0,
+                io_channels_write__valid_1,
+  output [31:0] io_channels_write__address_0,
+                io_channels_write__address_1,
+  output [7:0]  io_channels_write__data_0,
+                io_channels_write__data_1
 );
 
   reg  [2:0]  channelState_0;
@@ -63,23 +63,23 @@ module Dispatcher(
   reg  [7:0]  writeDataReg_1;
   reg         requestFound;
   wire        _GEN = channelState_0 == 3'h0;
-  wire        _GEN_0 = ~requestFound & io_consumers_0_read_valid;
-  wire        _GEN_1 = ~requestFound & io_consumers_0_write_valid;
-  wire        _GEN_2 = ~requestFound & io_consumers_1_read_valid;
-  wire        _GEN_3 = ~requestFound & io_consumers_1_write_valid;
-  wire        _GEN_4 = ~requestFound & io_consumers_2_read_valid;
-  wire        _GEN_5 = ~requestFound & io_consumers_2_write_valid;
-  wire        _GEN_6 = ~requestFound & io_consumers_3_read_valid;
-  wire        _GEN_7 = ~requestFound & io_consumers_3_write_valid;
+  wire        _GEN_0 = ~requestFound & io_consumers_read__valid_0;
+  wire        _GEN_1 = ~requestFound & io_consumers_write__valid_0;
+  wire        _GEN_2 = ~requestFound & io_consumers_read__valid_1;
+  wire        _GEN_3 = ~requestFound & io_consumers_write__valid_1;
+  wire        _GEN_4 = ~requestFound & io_consumers_read__valid_2;
+  wire        _GEN_5 = ~requestFound & io_consumers_write__valid_2;
+  wire        _GEN_6 = ~requestFound & io_consumers_read__valid_3;
+  wire        _GEN_7 = ~requestFound & io_consumers_write__valid_3;
   wire        _GEN_8 = channelState_0 == 3'h3;
-  wire        io_channels_0_read_valid_0 = ~_GEN & _GEN_8;
+  wire        io_channels_read__valid_0_0 = ~_GEN & _GEN_8;
   wire        _GEN_9 = channelState_0 == 3'h1;
   wire        _GEN_10 = channelState_0 == 3'h4;
   wire        _GEN_11 = _GEN | _GEN_8 | _GEN_9;
   wire        _GEN_12 = _GEN_11 | ~_GEN_10;
   wire        _GEN_13 = channelState_1 == 3'h0;
   wire        _GEN_14 = channelState_1 == 3'h3;
-  wire        io_channels_1_read_valid_0 = ~_GEN_13 & _GEN_14;
+  wire        io_channels_read__valid_1_0 = ~_GEN_13 & _GEN_14;
   wire        _GEN_15 = channelState_1 == 3'h1;
   wire        _GEN_16 = _GEN_13 | _GEN_14;
   wire        _GEN_17 = channelState_1 == 3'h4;
@@ -109,7 +109,7 @@ module Dispatcher(
       if (_GEN) begin
         if (_GEN_6) begin
           channelState_0 <= 3'h3;
-          readAddressReg_0 <= io_consumers_3_read_bits_address;
+          readAddressReg_0 <= io_consumers_read__address_3;
         end
         else begin
           if (_GEN_7)
@@ -127,11 +127,11 @@ module Dispatcher(
           else if (_GEN_1)
             channelState_0 <= 3'h4;
           if (_GEN_4)
-            readAddressReg_0 <= io_consumers_2_read_bits_address;
+            readAddressReg_0 <= io_consumers_read__address_2;
           else if (_GEN_2)
-            readAddressReg_0 <= io_consumers_1_read_bits_address;
+            readAddressReg_0 <= io_consumers_read__address_1;
           else if (_GEN_0)
-            readAddressReg_0 <= io_consumers_0_read_bits_address;
+            readAddressReg_0 <= io_consumers_read__address_0;
         end
         if (_GEN_23) begin
           if (_GEN_22) begin
@@ -139,35 +139,37 @@ module Dispatcher(
               if (_GEN_20) begin
               end
               else begin
-                writeAddressReg_0 <= io_consumers_0_write_bits_address;
-                writeDataReg_0 <= io_consumers_0_write_bits_data;
+                writeAddressReg_0 <= io_consumers_write__address_0;
+                writeDataReg_0 <= io_consumers_write__data_0;
               end
             end
             else begin
-              writeAddressReg_0 <= io_consumers_1_write_bits_address;
-              writeDataReg_0 <= io_consumers_1_write_bits_data;
+              writeAddressReg_0 <= io_consumers_write__address_1;
+              writeDataReg_0 <= io_consumers_write__data_1;
             end
           end
           else begin
-            writeAddressReg_0 <= io_consumers_2_write_bits_address;
-            writeDataReg_0 <= io_consumers_2_write_bits_data;
+            writeAddressReg_0 <= io_consumers_write__address_2;
+            writeDataReg_0 <= io_consumers_write__data_2;
           end
         end
         else begin
-          writeAddressReg_0 <= io_consumers_3_write_bits_address;
-          writeDataReg_0 <= io_consumers_3_write_bits_data;
+          writeAddressReg_0 <= io_consumers_write__address_3;
+          writeDataReg_0 <= io_consumers_write__data_3;
         end
       end
       else if (_GEN_8) begin
-        if (io_channels_0_read_ready)
+        if (io_channels_read__ready_0)
           channelState_0 <= 3'h1;
       end
-      else if (_GEN_9 ? io_channels_0_read_valid_0 : _GEN_10 & io_channels_0_write_ready)
+      else if (_GEN_9
+                 ? io_channels_read__valid_0_0
+                 : _GEN_10 & io_channels_write__ready_0)
         channelState_0 <= 3'h0;
       if (_GEN_13) begin
         if (_GEN_6) begin
           channelState_1 <= 3'h3;
-          readAddressReg_1 <= io_consumers_3_read_bits_address;
+          readAddressReg_1 <= io_consumers_read__address_3;
         end
         else begin
           if (_GEN_7)
@@ -185,11 +187,11 @@ module Dispatcher(
           else if (_GEN_1)
             channelState_1 <= 3'h4;
           if (_GEN_4)
-            readAddressReg_1 <= io_consumers_2_read_bits_address;
+            readAddressReg_1 <= io_consumers_read__address_2;
           else if (_GEN_2)
-            readAddressReg_1 <= io_consumers_1_read_bits_address;
+            readAddressReg_1 <= io_consumers_read__address_1;
           else if (_GEN_0)
-            readAddressReg_1 <= io_consumers_0_read_bits_address;
+            readAddressReg_1 <= io_consumers_read__address_0;
         end
         if (_GEN_6 | _GEN_7)
           currentConsumer_1 <= 2'h3;
@@ -205,74 +207,76 @@ module Dispatcher(
               if (_GEN_20) begin
               end
               else begin
-                writeAddressReg_1 <= io_consumers_0_write_bits_address;
-                writeDataReg_1 <= io_consumers_0_write_bits_data;
+                writeAddressReg_1 <= io_consumers_write__address_0;
+                writeDataReg_1 <= io_consumers_write__data_0;
               end
             end
             else begin
-              writeAddressReg_1 <= io_consumers_1_write_bits_address;
-              writeDataReg_1 <= io_consumers_1_write_bits_data;
+              writeAddressReg_1 <= io_consumers_write__address_1;
+              writeDataReg_1 <= io_consumers_write__data_1;
             end
           end
           else begin
-            writeAddressReg_1 <= io_consumers_2_write_bits_address;
-            writeDataReg_1 <= io_consumers_2_write_bits_data;
+            writeAddressReg_1 <= io_consumers_write__address_2;
+            writeDataReg_1 <= io_consumers_write__data_2;
           end
         end
         else begin
-          writeAddressReg_1 <= io_consumers_3_write_bits_address;
-          writeDataReg_1 <= io_consumers_3_write_bits_data;
+          writeAddressReg_1 <= io_consumers_write__address_3;
+          writeDataReg_1 <= io_consumers_write__data_3;
         end
       end
       else if (_GEN_14) begin
-        if (io_channels_1_read_ready)
+        if (io_channels_read__ready_1)
           channelState_1 <= 3'h1;
       end
-      else if (_GEN_15 ? io_channels_1_read_valid_0 : _GEN_17 & io_channels_1_write_ready)
+      else if (_GEN_15
+                 ? io_channels_read__valid_1_0
+                 : _GEN_17 & io_channels_write__ready_1)
         channelState_1 <= 3'h0;
     end
     if (_GEN_13 | _GEN)
       requestFound <=
         _GEN_6 | _GEN_7 | _GEN_4 | _GEN_5 | _GEN_2 | _GEN_3 | _GEN_0 | _GEN_1;
   end // always @(posedge)
-  assign io_consumers_0_read_ready = _GEN_13 & _GEN_0 | _GEN & _GEN_0;
-  assign io_consumers_0_read_bits_data =
-    _GEN_16 | ~(_GEN_15 & io_channels_1_read_valid_0 & currentConsumer_1 == 2'h0)
-      ? io_channels_0_read_bits_data
-      : io_channels_1_read_bits_data;
-  assign io_consumers_0_write_ready =
+  assign io_consumers_read__ready_0 = _GEN_13 & _GEN_0 | _GEN & _GEN_0;
+  assign io_consumers_read__ready_1 = _GEN_13 & _GEN_2 | _GEN & _GEN_2;
+  assign io_consumers_read__ready_2 = _GEN_13 & _GEN_4 | _GEN & _GEN_4;
+  assign io_consumers_read__ready_3 = _GEN_13 & _GEN_6 | _GEN & _GEN_6;
+  assign io_consumers_read__data_0 =
+    _GEN_16 | ~(_GEN_15 & io_channels_read__valid_1_0 & currentConsumer_1 == 2'h0)
+      ? io_channels_read__data_0
+      : io_channels_read__data_1;
+  assign io_consumers_read__data_1 =
+    _GEN_16 | ~(_GEN_15 & io_channels_read__valid_1_0 & currentConsumer_1 == 2'h1)
+      ? io_channels_read__data_0
+      : io_channels_read__data_1;
+  assign io_consumers_read__data_2 =
+    _GEN_16 | ~(_GEN_15 & io_channels_read__valid_1_0 & currentConsumer_1 == 2'h2)
+      ? io_channels_read__data_0
+      : io_channels_read__data_1;
+  assign io_consumers_read__data_3 =
+    _GEN_16 | ~(_GEN_15 & io_channels_read__valid_1_0 & (&currentConsumer_1))
+      ? io_channels_read__data_0
+      : io_channels_read__data_1;
+  assign io_consumers_write__ready_0 =
     _GEN_13 & ~_GEN_0 & _GEN_1 | _GEN & ~_GEN_0 & _GEN_1;
-  assign io_consumers_1_read_ready = _GEN_13 & _GEN_2 | _GEN & _GEN_2;
-  assign io_consumers_1_read_bits_data =
-    _GEN_16 | ~(_GEN_15 & io_channels_1_read_valid_0 & currentConsumer_1 == 2'h1)
-      ? io_channels_0_read_bits_data
-      : io_channels_1_read_bits_data;
-  assign io_consumers_1_write_ready =
+  assign io_consumers_write__ready_1 =
     _GEN_13 & ~_GEN_2 & _GEN_3 | _GEN & ~_GEN_2 & _GEN_3;
-  assign io_consumers_2_read_ready = _GEN_13 & _GEN_4 | _GEN & _GEN_4;
-  assign io_consumers_2_read_bits_data =
-    _GEN_16 | ~(_GEN_15 & io_channels_1_read_valid_0 & currentConsumer_1 == 2'h2)
-      ? io_channels_0_read_bits_data
-      : io_channels_1_read_bits_data;
-  assign io_consumers_2_write_ready =
+  assign io_consumers_write__ready_2 =
     _GEN_13 & ~_GEN_4 & _GEN_5 | _GEN & ~_GEN_4 & _GEN_5;
-  assign io_consumers_3_read_ready = _GEN_13 & _GEN_6 | _GEN & _GEN_6;
-  assign io_consumers_3_read_bits_data =
-    _GEN_16 | ~(_GEN_15 & io_channels_1_read_valid_0 & (&currentConsumer_1))
-      ? io_channels_0_read_bits_data
-      : io_channels_1_read_bits_data;
-  assign io_consumers_3_write_ready =
+  assign io_consumers_write__ready_3 =
     _GEN_13 & ~_GEN_6 & _GEN_7 | _GEN & ~_GEN_6 & _GEN_7;
-  assign io_channels_0_read_valid = io_channels_0_read_valid_0;
-  assign io_channels_0_read_bits_address = _GEN | ~_GEN_8 ? 32'h0 : readAddressReg_0;
-  assign io_channels_0_write_valid = ~_GEN_11 & _GEN_10;
-  assign io_channels_0_write_bits_address = _GEN_12 ? 32'h0 : writeAddressReg_0;
-  assign io_channels_0_write_bits_data = _GEN_12 ? 8'h0 : writeDataReg_0;
-  assign io_channels_1_read_valid = io_channels_1_read_valid_0;
-  assign io_channels_1_read_bits_address = _GEN_13 | ~_GEN_14 ? 32'h0 : readAddressReg_1;
-  assign io_channels_1_write_valid = ~_GEN_18 & _GEN_17;
-  assign io_channels_1_write_bits_address = _GEN_19 ? 32'h0 : writeAddressReg_1;
-  assign io_channels_1_write_bits_data = _GEN_19 ? 8'h0 : writeDataReg_1;
+  assign io_channels_read__valid_0 = io_channels_read__valid_0_0;
+  assign io_channels_read__valid_1 = io_channels_read__valid_1_0;
+  assign io_channels_read__address_0 = readAddressReg_0;
+  assign io_channels_read__address_1 = readAddressReg_1;
+  assign io_channels_write__valid_0 = ~_GEN_11 & _GEN_10;
+  assign io_channels_write__valid_1 = ~_GEN_18 & _GEN_17;
+  assign io_channels_write__address_0 = _GEN_12 ? 32'h0 : writeAddressReg_0;
+  assign io_channels_write__address_1 = _GEN_19 ? 32'h0 : writeAddressReg_1;
+  assign io_channels_write__data_0 = _GEN_12 ? 8'h0 : writeDataReg_0;
+  assign io_channels_write__data_1 = _GEN_19 ? 8'h0 : writeDataReg_1;
 endmodule
 
 
