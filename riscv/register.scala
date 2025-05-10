@@ -74,11 +74,11 @@ class RegisterFile(
   val registers = RegInit(VecInit(Seq.fill(numRegs)(0.S(xlen.W))))
 
   // Helper function for read port logic to reduce duplication
-  def readPort(en: Bool, addr: UInt, writeEn: Bool, writeAddr: UInt, writeData: SInt): SInt. = {
+  def readPort(en: Bool, addr: UInt, writeEn: Bool, writeAddr: UInt, writeData: SInt): SInt = {
     val isReg0 = addr === 0.U
     val isWriteConflict = writeEn && (addr === writeAddr)
     
-    Mux(
+    return Mux(
       !en || isReg0, 
       0.S(xlen.W),                // Reading disabled or x0 -> return 0
       Mux(
@@ -100,21 +100,27 @@ class RegisterFile(
     io.read0.data := 0.S(xlen.W)
   }
 
-  // Read ports with forwarding logic
-  io.read0.data := readPort(
-    io.read0.en, 
-    io.read0.addr,
-    io.write.en,
-    io.write.addr,
-    io.write.data
+
+  // Read port 0 with forwarding logic
+  io.read0.data := Mux(
+    !io.read0.en || io.read0.addr === 0.U,
+    0.S(xlen.W),                // Reading disabled or x0 -> return 0
+    Mux(
+       io.write.en && (io.read0.addr === io.write.addr),
+      io.write.data,            // Handle read-after-write in same cycle
+      registers(io.read0.addr)  // Normal register read
+    )
   )
   
-  io.read1.data := readPort(
-    io.read1.en, 
-    io.read1.addr,
-    io.write.en, 
-    io.write.addr, 
-    io.write.data
+  // Read port 1 with forwarding logic
+  io.read1.data := Mux(
+    !io.read1.en || io.read1.addr === 0.U,
+    0.S(xlen.W),                // Reading disabled or x0 -> return 0
+    Mux(
+      io.write.en && (io.read1.addr === io.write.addr),
+      io.write.data,            // Handle read-after-write in same cycle
+      registers(io.read1.addr)  // Normal register read
+    )
   )
 
   //   // Connect debug interface
