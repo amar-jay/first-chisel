@@ -89,10 +89,7 @@ generate_hdl() {
     local output_file="${target_dir}/$(basename "${output_filename}").${ext}"
     info "Generating ${output_type} from ${input_file}"
     mkdir -p "$target_dir"  
-    scala-cli "$input_file" \
-        --output "$output_file" \
-        --target "$output_type" \
-        --verbose
+    scala-cli "$input_file" # > "$output_file" #2> /dev/null
     
     if [ $? -eq 0 ]; then
         success "Generated: ${output_file}"
