@@ -373,11 +373,11 @@ class ALUTest extends AnyFlatSpec with ChiselScalatestTester {
   }
 }
 
-object Main extends App {
-  println(
-    ChiselStage.emitSystemVerilog(
-      gen = new ALU,
-      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
-    )
-  )
-}
+// object Main extends App {
+//   println(
+//     ChiselStage.emitSystemVerilog(
+//       gen = new ALU,
+//       firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
+//     )
+//   )
+// }

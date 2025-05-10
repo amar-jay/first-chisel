@@ -16,6 +16,7 @@ object Constants {
   val ADDR_WIDTH = 32
   val CHANNEL_BW = 8
   val CONSUMER_BW = 8
+  val MEM_ADDR_WIDTH = 5
 }
 
 object InstructionTypes extends ChiselEnum {
@@ -110,6 +111,40 @@ object Instructions extends ChiselEnum {
 	U_I_AUIPC = Value
 }
 
+object InstructionToALU {
+  import ALUOperations._
+  import Instructions._
+
+	val mapping = Map[Instructions.Type, ALUOperations.Type](
+		// R-type ALU instructions
+		R_I_ADD -> ADD,
+		R_I_SUB -> SUB,
+		R_I_XOR -> XOR,
+		R_I_OR -> OR,
+		R_I_AND -> AND,
+		R_I_SLL -> SLL,
+		R_I_SRL -> SRL,
+		R_I_SRA -> SRA,
+		R_I_SLT -> SLT,
+		R_I_SLTU -> SLTU,
+
+		// I-type ALU immediate instructions
+		I_I_ADDI -> ADD,
+		I_I_XORI -> XOR,
+		I_I_ORI -> OR,
+		I_I_ANDI -> AND,
+		I_I_SLLI -> SLL,
+		I_I_SRLI -> SRL,
+		I_I_SRAI -> SRA,
+		I_I_SLTI -> SLT,
+		I_I_SLTIU -> SLTU,
+	)
+
+	def getALUOp(instr: Instructions.Type): ALUOperations.Type = {
+    mapping.getOrElse(instr, ALUOperations.NOP) // Default to NOP if not found
+  }
+}
+
 
 object F_Instructions extends ChiselEnum {
 	// floating point operations
@@ -137,6 +172,7 @@ object F_Instructions extends ChiselEnum {
 
 
 object ALUOperations extends ChiselEnum {
+	val NOP = Value
 	val ADD, SUB, SLL, XOR, SRL, SRA, OR, AND = Value
 	
 	// if (CONFIG.SUPPORT_MULDIV) {

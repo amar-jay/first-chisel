@@ -10,7 +10,7 @@ import chisel3.util._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import _root_.circt.stage.ChiselStage
-import riscv.{Constants, Opcodes, InstructionTypes}
+import riscv.{Opcodes, InstructionTypes}
 import riscv.Instructions._
 
 // instruction decoder for RISC-V
@@ -20,12 +20,10 @@ import chisel3.util.switch
 import chisel3.when
 import firrtl2.backends.experimental.smt.Op
 
-
-class InstructionDecoder extends Module {
-  print("Instruction Decoder\n", Constants)
+class InstructionFetcher extends Module {
   val io = IO(new Bundle {
     val inst = Input(UInt(32.W))
-    val pc = Input(UInt(7.W))
+   //  val pc = Input(UInt(7.W))
 
     val rd_addr   = Output(UInt(5.W))
     val rs1_addr  = Output(UInt(5.W))
@@ -36,7 +34,7 @@ class InstructionDecoder extends Module {
     val br_type   = Output(UInt(3.W))
     val mem_size  = Output(UInt(3.W)) 
     val wb_sel    = Output(Bool()) 
-    val rf_wen    = Output(Bool()) 
+    val rf_wen    = Output(Bool()) // Register file write enable
     val csr_cmd_en   = Output(UInt(3.W))
     val illegal   = Output(Bool())
     val inst_type = Output(InstructionTypes())
@@ -62,11 +60,17 @@ class InstructionDecoder extends Module {
   // Immediate value extraction
   val i_imm = Cat(Fill(20, io.inst(31)), io.inst(31, 20)) // Sign-extended
   val s_imm = Cat(Fill(20, io.inst(31)), io.inst(31, 25), io.inst(11, 7)) // Sign-extended
-  val b_imm = Cat(Fill(19, io.inst(31)), io.inst(31), io.inst(7), io.inst(30, 25), io.inst(11, 8), 0.U(1.W)) // Sign-extended
   val u_imm = Cat(io.inst(31, 12), 0.U(12.W))
-  val j_imm = Cat(Fill(11, io.inst(31)), io.inst(31), io.inst(19, 12), io.inst(20), io.inst(30, 21), 0.U(1.W)) // Sign-extended
+	//  val b_imm = Cat(Fill(19, io.inst(31)), io.inst(31), io.inst(7), io.inst(30, 25), io.inst(11, 8), 0.U(1.W)) // Sign-extended
+  val j_imm = Cat(Fill(20, io.inst(31)), io.inst(31), io.inst(19, 12), io.inst(20), io.inst(30, 21), 0.U(1.W)) // Sign-extended
+  // https://github.com/msyksphinz-self/chisel-soc/blob/main/src/main/scala/core/cpu.scala#L119
+  val b_imm_sext_      = Cat(io.inst(31), io.inst(7), io.inst(30,25), io.inst(11,8))
+  val b_imm = Cat(Fill(19,b_imm_sext_(11)), b_imm_sext_, 0.U)
+  val j_imm_sext_      = Cat(Fill(11, io.inst(31)), io.inst(31), io.inst(19,12), io.inst(20), io.inst(30,21), 0.U(1.W))
+//   val j_imm = Cat(Fill(64-21, j_imm_sext_(20)), j_imm_sext_, 0.U(1.W))
 
-  // Decode the instruction based on the opcode
+
+  // Fetch the instruction based on the opcode
    when (opcode === Opcodes.R_TYPE) {
       io.inst_type := InstructionTypes.R_TYPE
       io.rf_wen := true.B
@@ -237,7 +241,7 @@ class InstructionDecoder extends Module {
   
 }
 
-class InstructionDecoderTest extends AnyFlatSpec with ChiselScalatestTester {
+class InstructionFetcherTest extends AnyFlatSpec with ChiselScalatestTester {
   
   // Helper function to simplify common test patterns
 def testInstruction(
@@ -254,10 +258,10 @@ def testInstruction(
     expectedCsrCmdEn: Boolean = false,
     expectedIllegal: Boolean = false,
     expectedInstType: InstructionTypes.Type = InstructionTypes.NOP
-  )(implicit dut: InstructionDecoder): Unit = {
+  )(implicit dut: InstructionFetcher): Unit = {
     // Common setup
     dut.io.inst.poke(inst)
-    dut.io.pc.poke(0.U)
+   //  dut.io.pc.poke(0.U)
     
     // Common expectations for all instruction types
     dut.io.illegal.expect(expectedIllegal.B)
@@ -317,13 +321,13 @@ def testInstruction(
   }
 
   // R-TYPE INSTRUCTIONS
-  "InstructionDecoder" should "decode ADD instruction correctly" in {
-    test(new InstructionDecoder) { implicit dut =>
+  "InstructionFetcher" should "decode ADD instruction correctly" in {
+    test(new InstructionFetcher) { implicit dut =>
       // ADD x1, x2, x3
       val inst = "b00000000001100010000000010110011".U
       testInstruction(
         inst = inst,
-        expectedOp = R_I_ADD,
+        expectedOp = Instructions.R_I_ADD,
         expectedRdAddr = 1,
         expectedRs1Addr = 2,
         expectedRs2Addr = 3,
@@ -334,13 +338,13 @@ def testInstruction(
   }
 
   it should "decode SUB instruction correctly" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       // SUB x5, x6, x7
       val inst = "b01000000011101100000001010110011".U
       testInstruction(
         inst = inst,
 		  expectedInstType = InstructionTypes.R_TYPE,
-        expectedOp = R_I_SUB,
+        expectedOp = Instructions.R_I_SUB,
         expectedRdAddr = 5,
         expectedRs1Addr = 12,
         expectedRs2Addr = 7,
@@ -350,12 +354,12 @@ def testInstruction(
   }
 
   it should "decode XOR instruction correctly" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       // XOR x8, x9, x10
       val inst = "b00000000101001001100010000110011".U
       testInstruction(
         inst = inst,
-        expectedOp = R_I_XOR,
+        expectedOp = Instructions.R_I_XOR,
         expectedRdAddr = 8,
         expectedRs1Addr = 9,
         expectedRs2Addr = 10,
@@ -367,12 +371,12 @@ def testInstruction(
 
   // I-TYPE IMMEDIATE INSTRUCTIONS
   it should "decode ADDI instruction correctly" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       // ADDI x1, x2, 123
       val inst = "b00000111101100010000000010010011".U
       testInstruction(
         inst = inst,
-        expectedOp = I_I_ADDI,
+        expectedOp = Instructions.I_I_ADDI,
         expectedRdAddr = 1,
         expectedRs1Addr = 2,
 		  expectedRs2Addr = 0,
@@ -384,12 +388,12 @@ def testInstruction(
   }
 
   it should "decode ANDI instruction correctly" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       // ANDI x3, x4, -1
       val inst = "b11111111111100100111000110010011".U
       testInstruction(
         inst = inst,
-        expectedOp = I_I_ANDI,
+        expectedOp = Instructions.I_I_ANDI,
         expectedRdAddr = 3,
         expectedRs1Addr = 4,
         expectedImm = BigInt("FFFFFFFF", 16), // -1 sign-extended to 32 bits
@@ -401,12 +405,12 @@ def testInstruction(
 
   // I-TYPE LOAD INSTRUCTIONS
   it should "decode LW instruction correctly" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       // LW x5, 16(x6)
       val inst = "b00000001000000110010001010000011".U
       testInstruction(
         inst = inst,
-        expectedOp = I_I_LW,
+        expectedOp = Instructions.I_I_LW,
         expectedRdAddr = 5,
         expectedRs1Addr = 6,
         expectedImm = 16,
@@ -419,12 +423,12 @@ def testInstruction(
   }
 
   it should "decode LB instruction correctly" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       // LB x7, -4(x8)
       val inst = "b11111111110001000000001110000011".U
       testInstruction(
         inst = inst,
-        expectedOp = I_I_LB,
+        expectedOp = Instructions.I_I_LB,
         expectedRdAddr = 7,
         expectedRs1Addr = 8,
         expectedImm = BigInt("FFFFFFFC", 16), // -4 sign-extended
@@ -438,12 +442,12 @@ def testInstruction(
 
   // S-TYPE INSTRUCTIONS
   it should "decode SW instruction correctly" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       // SW x10, 12(x11)
       val inst = "b00000000101001011010011000100011".U
       testInstruction(
         inst = inst,
-        expectedOp = S_I_SW,
+        expectedOp = Instructions.S_I_SW,
         expectedRs1Addr = 11,
         expectedRs2Addr = 10,
         expectedImm = 12,
@@ -455,12 +459,12 @@ def testInstruction(
 
 //   // B-TYPE INSTRUCTIONS
 //   it should "decode BEQ instruction correctly" in {
-//     test(new InstructionDecoder) { implicit dut =>
+//     test(new InstructionFetcher) { implicit dut =>
 //       // BEQ x12, x27, 100
 //       val inst = "b00000001101101100000100001100011".U
 //       testInstruction(
 //         inst = inst,
-//         expectedOp = B_I_BEQ,
+//         expectedOp = Instructions.B_I_BEQ,
 //         expectedRs1Addr = 12,
 //         expectedRs2Addr = 27,
 //         expectedImm = 100,
@@ -471,12 +475,12 @@ def testInstruction(
 //   }
 
 //   it should "decode BNE instruction correctly" in {
-//     test(new InstructionDecoder) { implicit dut =>
+//     test(new InstructionFetcher) { implicit dut =>
 //       // BNE x14, x15, -8
 //       val inst = "b11111110111101110001000001100011".U
 //       testInstruction(
 //         inst = inst,
-//         expectedOp = B_I_BNE,
+//         expectedOp = Instructions.B_I_BNE,
 //         expectedRs1Addr = 14,
 //         expectedRs2Addr = 15,
 //         expectedImm = BigInt("FFFFFFF8", 16), // -8 sign-extended
@@ -488,12 +492,12 @@ def testInstruction(
 
   // U-TYPE INSTRUCTIONS
   it should "decode LUI instruction correctly" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       // LUI x16, 0xABCDE
       val inst = "b10101011110011011110100000110111".U
       testInstruction(
         inst = inst,
-        expectedOp = U_I_LUI,
+        expectedOp = Instructions.U_I_LUI,
         expectedRdAddr = 16,
         expectedImm = BigInt("ABCDE000", 16),
         expectedRfWen = true,
@@ -503,12 +507,12 @@ def testInstruction(
   }
 
   it should "decode AUIPC instruction correctly" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       // AUIPC x17, 0x12345
       val inst = "b00010010001101000101100010010111".U
       testInstruction(
         inst = inst,
-        expectedOp = U_I_AUIPC,
+        expectedOp = Instructions.U_I_AUIPC,
         expectedRdAddr = 17,
         expectedImm = BigInt("12345000", 16),
         expectedRfWen = true,
@@ -517,30 +521,30 @@ def testInstruction(
     }
   }
 
-//   // J-TYPE INSTRUCTIONS
-//   it should "decode JAL instruction correctly" in {
-//     test(new InstructionDecoder) { implicit dut =>
-//       // JAL x18, 1024
-//       val inst = "b00000000010000000000100101101111".U
-//       testInstruction(
-//         inst = inst,
-//         expectedOp = J_I_JAL,
-//         expectedRdAddr = 18,
-//         expectedImm = 1024,
-//         expectedRfWen = true,
-//         expectedInstType = InstructionTypes.J_TYPE
-//       )
-//     }
-//   }
+//   J-TYPE INSTRUCTIONS
+  it should "decode JAL instruction correctly" in {
+    test(new InstructionFetcher) { implicit dut =>
+      // JAL x18, 1024
+      val inst = "b00000000010000000000100101101111".U
+      testInstruction(
+        inst = inst,
+        expectedOp = Instructions.J_I_JAL,
+        expectedRdAddr = 18,
+        expectedImm = 1024,
+        expectedRfWen = true,
+        expectedInstType = InstructionTypes.J_TYPE
+      )
+    }
+  }
 
   // I-TYPE JALR INSTRUCTIONS
   it should "decode JALR instruction correctly" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       // JALR x19, x20, 64
       val inst = "b00000100000010100000100111100111".U
       testInstruction(
         inst = inst,
-        expectedOp = I_I_JALR,
+        expectedOp = Instructions.I_I_JALR,
         expectedRdAddr = 19,
         expectedRs1Addr = 20,
         expectedImm = 64,
@@ -552,7 +556,7 @@ def testInstruction(
 
   // Illegal instruction tests
   it should "flag illegal instructions for unknown opcodes" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       val inst = "b00000000000000000000000000000000".U // All zeros
       testInstruction(
         inst = inst,
@@ -563,7 +567,7 @@ def testInstruction(
   }
 
   it should "flag illegal I-TYPE2 instructions with invalid funct3" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       // Invalid ADDI-like instruction with funct3=7'b110
       val inst = "b00000000000100000110000010000011".U
       dut.io.inst.poke(inst)
@@ -573,12 +577,12 @@ def testInstruction(
 
   // Edge cases
   it should "handle maximum positive immediate correctly" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       // ADDI x21, x22, 2047 (max positive 12-bit immediate)
       val inst = "b01111111111110110000101010010011".U
       testInstruction(
         inst = inst,
-        expectedOp = I_I_ADDI,
+        expectedOp = Instructions.I_I_ADDI,
         expectedRdAddr = 21,
         expectedRs1Addr = 22,
         expectedImm = 2047,
@@ -589,12 +593,12 @@ def testInstruction(
   }
 
   it should "handle maximum negative immediate correctly" in {
-    test(new InstructionDecoder) { implicit dut =>
+    test(new InstructionFetcher) { implicit dut =>
       // ADDI x23, x24, -2048 (max negative 12-bit immediate)
       val inst = "b10000000000011000000101110010011".U
       testInstruction(
         inst = inst,
-        expectedOp = I_I_ADDI,
+        expectedOp = Instructions.I_I_ADDI,
         expectedRdAddr = 23,
         expectedRs1Addr = 24,
         expectedImm = BigInt("FFFFF800", 16), // -2048 sign-extended
@@ -607,7 +611,7 @@ def testInstruction(
 // object Main extends App {
 //   println(
 //     ChiselStage.emitSystemVerilog(
-// 		gen = new InstructionDecoder,
+// 		gen = new InstructionFetcher,
 //       firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
 //     )
 //   )
