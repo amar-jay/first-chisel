@@ -52,8 +52,8 @@ class RISCVCore extends Module {
 	val rd_addr = inst_fetcher.io.rd_addr
 	val rs1_addr = inst_fetcher.io.rs1_addr
 	val rs2_addr = inst_fetcher.io.rs2_addr
-	val rs1_data = Wire(UInt(32.W)) // output from the register file
-	val rs2_data = Wire(UInt(32.W)) // output from the register file
+	val rs1_data = Reg(UInt(32.W)) // output from the register file
+	val rs2_data = Reg(UInt(32.W)) // output from the register file
 	val rd_data = Reg(UInt(32.W)) // input to the register file
 
 
@@ -84,12 +84,16 @@ class RISCVCore extends Module {
 		regfile.io.read0.en   := true.B
 		regfile.io.read0.addr := rs1_addr
 
-		rs1_data := regfile.io.read0.data.asUInt
+		when (regfile.io.read0.ready) {
+			rs1_data := regfile.io.read0.data.asUInt
+		}
 
 		regfile.io.read1.en   := true.B
 		regfile.io.read1.addr := rs2_addr
 
-		rs2_data := regfile.io.read1.data.asUInt
+		when (regfile.io.read1.ready) {	
+			rs2_data := regfile.io.read1.data.asUInt
+		}
 	}
 
 	// when we have a I, R, S, B type instruction and I type instruction
@@ -115,6 +119,7 @@ class RISCVCore extends Module {
 	// print a and b values
 	rd_data := alu.io.result
 
+	printf(cf"ALU Operation: op = ${inst_fetcher.io._op} a = ${rs1_data} b = ${rs2_data}\n")
 
     // Instruction-specific handling
     switch(inst_fetcher.io.inst_type) {
@@ -228,7 +233,7 @@ class RISCVCore extends Module {
 	} 
 
 	// Connect output to IO
-   io.rddata := rd_data.asSInt
+   io.rddata <> rs1_data.asSInt
 }
 
 object Main extends App {
