@@ -114,79 +114,176 @@ class ALUTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "ALU"
 
   // Basic arithmetic operations
-  it should "perform addition correctly" in {
-    test(new ALU()) { dut =>
+  it should "perform basic operations correctly" in {
+		// perform addition with two inputs
+		test(new ALU())
+		.withAnnotations(Seq(WriteVcdAnnotation)){ dut =>
       dut.io.a.poke(10.U)
       dut.io.b.poke(15.U)
       dut.io.op.poke(ALUOperations.ADD)
-      dut.clock.step()
+      dut.clock.step(10)
       dut.io.result.expect(25.U)
       dut.io.zero.expect(false.B)
       dut.io.overflow.expect(false.B)
+
+		// perform subtraction with two inputs
+      dut.io.a.poke(20.U)
+      dut.io.b.poke(5.U)
+      dut.io.op.poke(ALUOperations.SUB)
+      dut.clock.step(10)
+      dut.io.result.expect(15.U)
+      dut.io.zero.expect(false.B)
+
+			// perform multiplication with two inputs
+      dut.io.a.poke(7.U)
+      dut.io.b.poke(9.U)
+      dut.io.op.poke(ALUOperations.MUL)
+      dut.clock.step(10)
+      dut.io.result.expect(63.U)
+      dut.io.overflow.expect(false.B)
+
+			// perform division with two inputs
+      dut.io.a.poke(100.U)
+      dut.io.b.poke(5.U)
+      dut.io.op.poke(ALUOperations.DIV)
+      dut.clock.step(10)
+      dut.io.result.expect(20.U)
+      dut.io.zero.expect(false.B)
+
+      dut.io.a.poke("b10101010".U)
+      dut.io.b.poke("b11110000".U)
+      dut.io.op.poke(ALUOperations.AND)
+      dut.clock.step(10)
+      dut.io.result.expect("b10100000".U)
+
+			// perform or with two inputs
+      dut.io.a.poke("b10101010".U)
+      dut.io.b.poke("b11110000".U)
+      dut.io.op.poke(ALUOperations.OR)
+      dut.clock.step(10)
+      dut.io.result.expect("b11111010".U)
+
+			// perform XOR with two inputs
+      dut.io.a.poke("b10101010".U)
+      dut.io.b.poke("b11110000".U)
+      dut.io.op.poke(ALUOperations.XOR)
+      dut.clock.step(10)
+      dut.io.result.expect("b01011010".U)
+
+			// perform logical left shift
+      dut.io.a.poke("b00000001".U)
+      dut.io.b.poke(3.U)
+      dut.io.op.poke(ALUOperations.SLL)
+      dut.clock.step(10)
+      dut.io.result.expect("b00001000".U)
+
+			// perform logical right shift
+      dut.io.a.poke("b10000000".U)
+      dut.io.b.poke(3.U)
+      dut.io.op.poke(ALUOperations.SRL)
+      dut.clock.step(10)
+      dut.io.result.expect("b00010000".U)
+
+
+
+			// perform arithmetic right shift
+      // With MSB = 1 (negative number)
+      var negativeNum = BigInt(2).pow(Constants.DATA_WIDTH - 1) | BigInt("10000000", 2)
+      dut.io.a.poke(negativeNum)
+      dut.io.b.poke(3.U)
+      dut.io.op.poke(ALUOperations.SRA)
+      dut.clock.step(10)
+      // Should preserve sign bit
+      val expected = (negativeNum >> 3) | (BigInt(7) << (Constants.DATA_WIDTH - 3))
+      dut.io.result.expect(expected)
+
+
+			// perform signed less than comparison
+      // Test with negative and positive numbers
+      negativeNum = BigInt(2).pow(Constants.DATA_WIDTH - 1) | 5
+      dut.io.a.poke(negativeNum) // Negative number in two's complement
+      dut.io.b.poke(5.U)
+      dut.io.op.poke(ALUOperations.SLT)
+      dut.clock.step(10)
+      dut.io.result.expect(1.U) // Negative < Positive
+      // Positive vs positive
+      dut.io.a.poke(3.U)
+      dut.io.b.poke(5.U)
+      dut.clock.step(10)
+      dut.io.result.expect(1.U) // 3 < 5
+
+			// perform unsigned less than comparison
+      // What's a negative number in signed is a large positive in unsigned
+      val largeNum = BigInt(2).pow(Constants.DATA_WIDTH - 1)
+      dut.io.a.poke(largeNum)
+      dut.io.b.poke(5.U)
+      dut.io.op.poke(ALUOperations.SLTU)
+      dut.clock.step(10)
+      dut.io.result.expect(0.U) // As unsigned, large number > 5
+      // Small numbers comparison
+      dut.io.a.poke(3.U)
+      dut.io.b.poke(5.U)
+      dut.clock.step(10)
+      dut.io.result.expect(1.U) // 3 < 5
+
+			// perform equality check
+      dut.io.a.poke(42.U)
+      dut.io.b.poke(42.U)
+      dut.io.op.poke(ALUOperations.SEQ)
+      dut.clock.step(10)
+      dut.io.result.expect(1.U) // Equal
+      dut.io.b.poke(43.U)
+      dut.clock.step(10)
+      dut.io.result.expect(0.U) // Not equal
+
+			// perform inequality check
+      dut.io.a.poke(42.U)
+      dut.io.b.poke(43.U)
+      dut.io.op.poke(ALUOperations.SNE)
+      dut.clock.step(10)
+      dut.io.result.expect(1.U) // Not equal
+      dut.io.b.poke(42.U)
+      dut.clock.step(10)
+      dut.io.result.expect(0.U) // Equal
     }
   }
 
-  it should "detect addition overflow" in {
-    test(new ALU()) { dut =>
+  it should "detect overflow" in {
+		test(new ALU())
+		.withAnnotations(Seq(WriteVcdAnnotation)){ dut =>
+			// detect overflow in addition
       // Max positive + 1 should overflow
       dut.io.a.poke(BigInt(2).pow(31) - 1)
       dut.io.b.poke(1.U)
       dut.io.op.poke(ALUOperations.ADD)
-      dut.clock.step()
+      dut.clock.step(10)
       dut.io.overflow.expect(true.B)
-    }
-  }
 
-  it should "perform subtraction correctly" in {
-    test(new ALU()) { dut =>
-      dut.io.a.poke(20.U)
-      dut.io.b.poke(5.U)
-      dut.io.op.poke(ALUOperations.SUB)
-      dut.clock.step()
-      dut.io.result.expect(15.U)
-      dut.io.zero.expect(false.B)
-    }
-  }
-
-  it should "detect subtraction overflow" in {
-    test(new ALU()) { dut =>
+			// detect overflow in subtraction
       // Most negative number - 1 should overflow
       dut.io.a.poke(BigInt(2).pow(31))
       dut.io.b.poke(1.U)
       dut.io.op.poke(ALUOperations.SUB)
-      dut.clock.step()
+      dut.clock.step(10)
       dut.io.overflow.expect(true.B)
+
+			// detect overflow in multiplication
+			// Max positive * 2 should overflow
+			dut.io.a.poke(BigInt(2).pow(31) - 1)
+			dut.io.b.poke(2.U)
+			dut.io.op.poke(ALUOperations.MUL)
+			dut.clock.step(10)
+			dut.io.overflow.expect(true.B)
     }
   }
 
-  it should "perform multiplication correctly" in {
-    test(new ALU()) { dut =>
-      dut.io.a.poke(7.U)
-      dut.io.b.poke(9.U)
-      dut.io.op.poke(ALUOperations.MUL)
-      dut.clock.step()
-      dut.io.result.expect(63.U)
-      dut.io.overflow.expect(false.B)
-    }
-  }
-
-  it should "perform division correctly" in {
-    test(new ALU()) { dut =>
-      dut.io.a.poke(100.U)
-      dut.io.b.poke(5.U)
-      dut.io.op.poke(ALUOperations.DIV)
-      dut.clock.step()
-      dut.io.result.expect(20.U)
-      dut.io.zero.expect(false.B)
-    }
-  }
 
 	it should "handle division by zero" in {
 	test(new ALU()) { dut =>
 		dut.io.a.poke(100.U)
 		dut.io.b.poke(0.U)
 		dut.io.op.poke(ALUOperations.DIV)
-		dut.clock.step()
+		dut.clock.step(10)
 		
 		// Use BigInt for test expectations instead of Chisel hardware expressions
 		val allOnes = (BigInt(1) << Constants.DATA_WIDTH) - 1
@@ -203,139 +300,8 @@ class ALUTest extends AnyFlatSpec with ChiselScalatestTester {
 		val allOnes = (BigInt(1) << Constants.DATA_WIDTH) - 1
       dut.io.b.poke(allOnes.U) // -1 in two's complement
       dut.io.op.poke(ALUOperations.DIV)
-      dut.clock.step()
+      dut.clock.step(10)
       dut.io.overflow.expect(true.B)
-    }
-  }
-
-  // Logical operations
-  it should "perform AND operation correctly" in {
-    test(new ALU()) { dut =>
-      dut.io.a.poke("b10101010".U)
-      dut.io.b.poke("b11110000".U)
-      dut.io.op.poke(ALUOperations.AND)
-      dut.clock.step()
-      dut.io.result.expect("b10100000".U)
-    }
-  }
-
-  it should "perform OR operation correctly" in {
-    test(new ALU()) { dut =>
-      dut.io.a.poke("b10101010".U)
-      dut.io.b.poke("b11110000".U)
-      dut.io.op.poke(ALUOperations.OR)
-      dut.clock.step()
-      dut.io.result.expect("b11111010".U)
-    }
-  }
-
-  it should "perform XOR operation correctly" in {
-    test(new ALU()) { dut =>
-      dut.io.a.poke("b10101010".U)
-      dut.io.b.poke("b11110000".U)
-      dut.io.op.poke(ALUOperations.XOR)
-      dut.clock.step()
-      dut.io.result.expect("b01011010".U)
-    }
-  }
-
-  // Shift operations
-  it should "perform logical left shift correctly" in {
-    test(new ALU()) { dut =>
-      dut.io.a.poke("b00000001".U)
-      dut.io.b.poke(3.U)
-      dut.io.op.poke(ALUOperations.SLL)
-      dut.clock.step()
-      dut.io.result.expect("b00001000".U)
-    }
-  }
-
-  it should "perform logical right shift correctly" in {
-    test(new ALU()) { dut =>
-      dut.io.a.poke("b10000000".U)
-      dut.io.b.poke(3.U)
-      dut.io.op.poke(ALUOperations.SRL)
-      dut.clock.step()
-      dut.io.result.expect("b00010000".U)
-    }
-  }
-
-  it should "perform arithmetic right shift correctly" in {
-    test(new ALU()) { dut =>
-      // With MSB = 1 (negative number)
-      val negativeNum = BigInt(2).pow(Constants.DATA_WIDTH - 1) | BigInt("10000000", 2)
-      dut.io.a.poke(negativeNum)
-      dut.io.b.poke(3.U)
-      dut.io.op.poke(ALUOperations.SRA)
-      dut.clock.step()
-      // Should preserve sign bit
-      val expected = (negativeNum >> 3) | (BigInt(7) << (Constants.DATA_WIDTH - 3))
-      dut.io.result.expect(expected)
-    }
-  }
-
-  // Comparison operations
-  it should "perform signed less than comparison correctly" in {
-    test(new ALU()) { dut =>
-      // Test with negative and positive numbers
-      val negativeNum = BigInt(2).pow(Constants.DATA_WIDTH - 1) | 5
-      dut.io.a.poke(negativeNum) // Negative number in two's complement
-      dut.io.b.poke(5.U)
-      dut.io.op.poke(ALUOperations.SLT)
-      dut.clock.step()
-      dut.io.result.expect(1.U) // Negative < Positive
-
-      // Positive vs positive
-      dut.io.a.poke(3.U)
-      dut.io.b.poke(5.U)
-      dut.clock.step()
-      dut.io.result.expect(1.U) // 3 < 5
-    }
-  }
-
-  it should "perform unsigned less than comparison correctly" in {
-    test(new ALU()) { dut =>
-      // What's a negative number in signed is a large positive in unsigned
-      val largeNum = BigInt(2).pow(Constants.DATA_WIDTH - 1)
-      dut.io.a.poke(largeNum)
-      dut.io.b.poke(5.U)
-      dut.io.op.poke(ALUOperations.SLTU)
-      dut.clock.step()
-      dut.io.result.expect(0.U) // As unsigned, large number > 5
-
-      // Small numbers comparison
-      dut.io.a.poke(3.U)
-      dut.io.b.poke(5.U)
-      dut.clock.step()
-      dut.io.result.expect(1.U) // 3 < 5
-    }
-  }
-
-  it should "perform equality comparison correctly" in {
-    test(new ALU()) { dut =>
-      dut.io.a.poke(42.U)
-      dut.io.b.poke(42.U)
-      dut.io.op.poke(ALUOperations.SEQ)
-      dut.clock.step()
-      dut.io.result.expect(1.U) // Equal
-
-      dut.io.b.poke(43.U)
-      dut.clock.step()
-      dut.io.result.expect(0.U) // Not equal
-    }
-  }
-
-  it should "perform inequality comparison correctly" in {
-    test(new ALU()) { dut =>
-      dut.io.a.poke(42.U)
-      dut.io.b.poke(43.U)
-      dut.io.op.poke(ALUOperations.SNE)
-      dut.clock.step()
-      dut.io.result.expect(1.U) // Not equal
-
-      dut.io.b.poke(42.U)
-      dut.clock.step()
-      dut.io.result.expect(0.U) // Equal
     }
   }
 
@@ -345,7 +311,7 @@ class ALUTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.a.poke(0xABCD1234L.U)
       dut.io.b.poke(0x00000000L.U)
       dut.io.op.poke(ALUOperations.COPY1)
-      dut.clock.step()
+      dut.clock.step(10)
       dut.io.result.expect(0xABCD1234L.U)
     }
   }
@@ -355,7 +321,7 @@ class ALUTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.a.poke(0x00000000L.U)
       dut.io.b.poke(0xABCD1234L.U)
       dut.io.op.poke(ALUOperations.COPY2)
-      dut.clock.step()
+      dut.clock.step(10)
       dut.io.result.expect(0xABCD1234L.U)
     }
   }
@@ -366,7 +332,7 @@ class ALUTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.a.poke(5.U)
       dut.io.b.poke(5.U)
       dut.io.op.poke(ALUOperations.SUB)
-      dut.clock.step()
+      dut.clock.step(10)
       dut.io.result.expect(0.U)
       dut.io.zero.expect(true.B)
     }

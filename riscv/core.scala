@@ -8,6 +8,7 @@ package riscv
 import chisel3._
 import chisel3.util._
 import chiseltest._
+import chiseltest.simulator.WriteVcdAnnotation
 import org.scalatest.flatspec.AnyFlatSpec
 import _root_.circt.stage.ChiselStage
 import riscv.{Opcodes, InstructionTypes, Instructions, InstructionFetcher, RegisterFile, ALU, InstructionToALU}
@@ -238,10 +239,14 @@ class RISCVCore extends Module {
 
 object Main extends App {
   println(
-    ChiselStage.emitSystemVerilog(
-		gen = new RISCVCore,
-      firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
-    )
+ChiselStage.emitSystemVerilog(
+  new RISCVCore,
+  firtoolOpts = Array(
+    "-disable-all-randomization",
+    "-strip-debug-info",
+    // "-verilog"  // ← this is the key!
+  )
+)
   )
 }
 
@@ -282,7 +287,9 @@ class RISCVCoreTest extends AnyFlatSpec with ChiselScalatestTester {
 
 	// Test R-type instructions
 	it should "correctly execute ADD instruction" in {
-		test(new RISCVCore()) { dut =>
+		test(new RISCVCore())
+		.withAnnotations(Seq(WriteVcdAnnotation))
+		 { dut =>
 			// First load values into registers
 			// ADDI x1, x0, 10 (x1 = 10)
 			val addi_x1:Int= makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 10, 0, 1)
@@ -304,7 +311,8 @@ class RISCVCoreTest extends AnyFlatSpec with ChiselScalatestTester {
 	}
 
 	it should "correctly execute SUB instruction" in {
-		test(new RISCVCore()) { dut =>
+		test(new RISCVCore())
+		.withAnnotations(Seq(WriteVcdAnnotation)){ dut =>
 			// First load values into registers
 			// ADDI x1, x0, 30 (x1 = 30)
 			val addi_x1 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 30, 0, 1)
@@ -326,7 +334,8 @@ class RISCVCoreTest extends AnyFlatSpec with ChiselScalatestTester {
 
 	// Test I-type instructions
 	it should "correctly execute ADDI instruction" in {
-		test(new RISCVCore()) { dut =>
+		test(new RISCVCore())
+		.withAnnotations(Seq(WriteVcdAnnotation)){ dut =>
 			// ADDI x1, x0, 42 (x1 = 42)
 			val addi = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 42, 0, 1)
 			dut.io.inst.poke(addi.U)
@@ -337,7 +346,8 @@ class RISCVCoreTest extends AnyFlatSpec with ChiselScalatestTester {
 
 	// Test immediate with sign extension
 	it should "handle negative immediates correctly" in {
-		test(new RISCVCore()) { dut =>
+		test(new RISCVCore())
+		.withAnnotations(Seq(WriteVcdAnnotation)){ dut =>
 			// ADDI x1, x0, -15 (x1 = -15)
 			val addi = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 0xFFF1, 0, 1) // 0xFFF1 is -15 in 12-bit two's complement
 			dut.io.inst.poke(addi.U)
@@ -348,7 +358,8 @@ class RISCVCoreTest extends AnyFlatSpec with ChiselScalatestTester {
 
 	// Test logical operations
 	it should "correctly execute AND, OR, XOR instructions" in {
-		test(new RISCVCore()) { dut =>
+		test(new RISCVCore())
+		.withAnnotations(Seq(WriteVcdAnnotation)){ dut =>
 			// Load test values
 			// ADDI x1, x0, 0x0F (x1 = 0x0F)
 			val addi_x1 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 0x0F, 0, 1)
@@ -382,7 +393,8 @@ class RISCVCoreTest extends AnyFlatSpec with ChiselScalatestTester {
 
 	// Test U-type instructions
 	it should "correctly execute LUI instruction" in {
-		test(new RISCVCore()) { dut =>
+		test(new RISCVCore())
+		.withAnnotations(Seq(WriteVcdAnnotation)){ dut =>
 			// LUI x1, 0x12345 (x1 = 0x12345000)
 			val lui = makeUType(Opcodes.U_TYPE1.litValue.toInt, 0x12345, 1)
 			dut.io.inst.poke(lui.U)
@@ -393,7 +405,8 @@ class RISCVCoreTest extends AnyFlatSpec with ChiselScalatestTester {
 
 	// Test J-type instructions (JAL)
 	it should "correctly execute JAL instruction" in {
-		test(new RISCVCore()) { dut =>
+		test(new RISCVCore())
+		.withAnnotations(Seq(WriteVcdAnnotation)){ dut =>
 			// Initial PC = 0
 			// JAL x1, 16 (x1 = 4, PC = 16)
 			val jal = makeJType(Opcodes.J_TYPE.litValue.toInt, 16, 1)
@@ -405,7 +418,8 @@ class RISCVCoreTest extends AnyFlatSpec with ChiselScalatestTester {
 
 	// Test branch instructions
 	it should "correctly execute BEQ instruction" in {
-		test(new RISCVCore()) { dut =>
+		test(new RISCVCore())
+		.withAnnotations(Seq(WriteVcdAnnotation)){ dut =>
 			// Load identical values in two registers
 			// ADDI x1, x0, 5 (x1 = 5)
 			val addi_x1 = makeIType(Opcodes.I_TYPE1.litValue.toInt, 0, 5, 0, 1)
@@ -434,7 +448,8 @@ class RISCVCoreTest extends AnyFlatSpec with ChiselScalatestTester {
 
 	// Test factorial calculation
 	it should "calculate factorial correctly" in {
-		test(new RISCVCore()) { dut =>
+		test(new RISCVCore())
+		.withAnnotations(Seq(WriteVcdAnnotation)){ dut =>
 			// This is a more complex test that calculates 5! using our core
 			
 			// Initialize x1 = 5 (n)
